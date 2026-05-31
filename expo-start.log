@@ -1,0 +1,10 @@
+Starting project at C:\Católica\Web Mobile\Projeto-prova-primeiro-GQ-mobile
+Starting Metro Bundler
+Waiting on http://localhost:8081
+Logs for your project will appear below.
+Web node_modules\expo-router\entry.js ░░░░░░░░░░░░░░░░  0.0% (0/1)
+Web node_modules\expo-router\entry.js ▓▓▓░░░░░░░░░░░░░ 24.6% (124/250)
+λ node_modules\expo-router\node\render.js ▓▓▓▓▓▓░░░░░░░░░░ 37.8% (257/418)
+Web node_modules\expo-router\entry.js ▓▓▓▓▓▓▓▓▓▓▓▓▓▓░░ 88.8% (751/799)
+λ node_modules\expo-router\node\render.js ▓▓▓▓▓▓▓▓▓▓▓▓▓▓░░ 90.7% (784/823)
+λ Bundled 7764ms node_modules\expo-router\node\render.js (852 modules)

@@ -1,16 +1,22 @@
 {
   "expo": {
     "name": "Projeto-prova-primeiro-GQ-mobile",
-    "slug": "Projeto-prova-primeiro-GQ-mobile",
+    "slug": "projeto-prova-primeiro-gq-mobile",
+    "owner": "poketeams",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/images/icon.png",
     "scheme": "projetoprovaprimeirogqmobile",
-    "userInterfaceStyle": "automatic",
+    "userInterfaceStyle": "dark",
+    "runtimeVersion": {
+      "policy": "appVersion"
+    },
     "ios": {
-      "icon": "./assets/expo.icon"
+      "supportsTablet": true,
+      "bundleIdentifier": "com.projetogq.poketeamsmobile"
     },
     "android": {
+      "package": "com.projetogq.poketeamsmobile",
       "adaptiveIcon": {
         "backgroundColor": "#E6F4FE",
         "foregroundImage": "./assets/images/android-icon-foreground.png",
@@ -37,8 +43,16 @@
       ]
     ],
     "experiments": {
-      "typedRoutes": true,
-      "reactCompiler": true
+      "typedRoutes": true
+    },
+    "extra": {
+      "router": {},
+      "eas": {
+        "projectId": "0e497e7f-84cd-4999-8b56-0c4a97c7224e"
+      }
+    },
+    "updates": {
+      "url": "https://u.expo.dev/0e497e7f-84cd-4999-8b56-0c4a97c7224e"
     }
   }
 }

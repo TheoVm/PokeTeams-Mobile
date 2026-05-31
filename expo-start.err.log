@@ -1,0 +1,29 @@
+"shadow*" style props are deprecated. Use "boxShadow".
+ReferenceError: window is not defined
+    at getValue (C:\Católica\Web Mobile\Projeto-prova-primeiro-GQ-mobile\node_modules\@react-native-async-storage\async-storage\lib\commonjs\AsyncStorage.js:63:52)
+    at C:\Católica\Web Mobile\Projeto-prova-primeiro-GQ-mobile\node_modules\@react-native-async-storage\async-storage\lib\commonjs\AsyncStorage.js:39:21
+    at new Promise (<anonymous>)
+    at createPromise (C:\Católica\Web Mobile\Projeto-prova-primeiro-GQ-mobile\node_modules\@react-native-async-storage\async-storage\lib\commonjs\AsyncStorage.js:37:10)
+    at Object.getItem (C:\Católica\Web Mobile\Projeto-prova-primeiro-GQ-mobile\node_modules\@react-native-async-storage\async-storage\lib\commonjs\AsyncStorage.js:63:12)
+    at getItemAsync (C:\Católica\Web Mobile\Projeto-prova-primeiro-GQ-mobile\node_modules\@supabase\auth-js\dist\main\lib\helpers.js:130:33)
+    at SupabaseAuthClient._recoverAndRefresh (C:\Católica\Web Mobile\Projeto-prova-primeiro-GQ-mobile\node_modules\@supabase\auth-js\dist\main\GoTrueClient.js:3818:69)
+    at SupabaseAuthClient._initialize (C:\Católica\Web Mobile\Projeto-prova-primeiro-GQ-mobile\node_modules\@supabase\auth-js\dist\main\GoTrueClient.js:333:24)
+    at fn (C:\Católica\Web Mobile\Projeto-prova-primeiro-GQ-mobile\node_modules\@supabase\auth-js\dist\main\GoTrueClient.js:272:35)
+    at C:\Católica\Web Mobile\Projeto-prova-primeiro-GQ-mobile\node_modules\@supabase\auth-js\dist\main\GoTrueClient.js:2277:36
+C:\Católica\Web Mobile\Projeto-prova-primeiro-GQ-mobile\node_modules\expo\node_modules\@expo\cli\build\src\utils\errors.js:130
+    throw error;
+    ^
+
+ReferenceError: window is not defined
+    at getValue (C:\Católica\Web Mobile\Projeto-prova-primeiro-GQ-mobile\node_modules\@react-native-async-storage\async-storage\lib\commonjs\AsyncStorage.js:63:52)
+    at C:\Católica\Web Mobile\Projeto-prova-primeiro-GQ-mobile\node_modules\@react-native-async-storage\async-storage\lib\commonjs\AsyncStorage.js:39:21
+    at new Promise (<anonymous>)
+    at createPromise (C:\Católica\Web Mobile\Projeto-prova-primeiro-GQ-mobile\node_modules\@react-native-async-storage\async-storage\lib\commonjs\AsyncStorage.js:37:10)
+    at Object.getItem (C:\Católica\Web Mobile\Projeto-prova-primeiro-GQ-mobile\node_modules\@react-native-async-storage\async-storage\lib\commonjs\AsyncStorage.js:63:12)
+    at getItemAsync (C:\Católica\Web Mobile\Projeto-prova-primeiro-GQ-mobile\node_modules\@supabase\auth-js\dist\main\lib\helpers.js:130:33)
+    at SupabaseAuthClient.__loadSession (C:\Católica\Web Mobile\Projeto-prova-primeiro-GQ-mobile\node_modules\@supabase\auth-js\dist\main\GoTrueClient.js:2334:66)
+    at SupabaseAuthClient._useSession (C:\Católica\Web Mobile\Projeto-prova-primeiro-GQ-mobile\node_modules\@supabase\auth-js\dist\main\GoTrueClient.js:2315:39)
+    at SupabaseAuthClient._emitInitialSession (C:\Católica\Web Mobile\Projeto-prova-primeiro-GQ-mobile\node_modules\@supabase\auth-js\dist\main\GoTrueClient.js:3417:27)
+    at C:\Católica\Web Mobile\Projeto-prova-primeiro-GQ-mobile\node_modules\@supabase\auth-js\dist\main\GoTrueClient.js:3411:22
+
+Node.js v24.11.1
