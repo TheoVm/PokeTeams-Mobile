@@ -25,7 +25,7 @@ export default function HomeScreen() {
         <Text style={styles.greeting}>Ola, {displayName}</Text>
         <Text style={styles.title}>Times de Pokemon</Text>
         <Text style={styles.description}>
-          Esta e a base mobile do construtor de times. A arquitetura ja esta pronta para CRUD,
+          Esta e a base mobile do construtor de times. A arquitetura já esta pronta para CRUD,
           relacionamento com Pokemon e telas futuras.
         </Text>
       </View>
