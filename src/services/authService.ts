@@ -22,6 +22,16 @@ function mapAuthErrorMessage(error: unknown, fallback = 'Nao foi possivel autent
   return fallback;
 }
 
+async function signInWithPassword(email: string, password: string) {
+  const { data, error } = await getSupabase().auth.signInWithPassword({
+    email: normalizeEmail(email),
+    password,
+  });
+
+  if (error) throw new Error(mapAuthErrorMessage(error));
+  return data;
+}
+
 export const authService = {
   async signUp(email: string, password: string, displayName?: string) {
     assertApiConfig();
@@ -46,19 +56,18 @@ export const authService = {
     });
 
     if (error) throw error;
-    return data;
+
+    if (data.session?.user) {
+      return data;
+    }
+
+    return signInWithPassword(normalizedEmail, password);
   },
 
   async signIn(email: string, password: string) {
     assertApiConfig();
 
-    const { data, error } = await getSupabase().auth.signInWithPassword({
-      email: normalizeEmail(email),
-      password,
-    });
-
-    if (error) throw new Error(mapAuthErrorMessage(error));
-    return data;
+    return signInWithPassword(email, password);
   },
 
   async signOut() {

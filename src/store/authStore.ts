@@ -33,8 +33,8 @@ export const useAuthStore = create<AuthState>((set) => ({
   async signIn(email, password) {
     set({ loading: true });
     try {
-      const { user } = await authService.signIn(email, password);
-      set({ user: user ?? null });
+      const { session, user } = await authService.signIn(email, password);
+      set({ user: session?.user ?? user ?? null });
     } finally {
       set({ loading: false });
     }
@@ -43,8 +43,8 @@ export const useAuthStore = create<AuthState>((set) => ({
   async signUp(email, password, displayName) {
     set({ loading: true });
     try {
-      const { user } = await authService.signUp(email, password, displayName);
-      set({ user: user ?? null });
+      const { session, user } = await authService.signUp(email, password, displayName);
+      set({ user: session?.user ?? user ?? null });
     } finally {
       set({ loading: false });
     }

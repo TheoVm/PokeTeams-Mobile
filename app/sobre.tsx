@@ -9,7 +9,7 @@ export default function SobreScreen() {
       <View style={styles.card}>
         <Text style={styles.text}>
           App mobile criado com Expo Router, Zustand e Supabase, baseado visualmente no projeto
-          Next original sem alterar a pasta web.
+          Next original web.
         </Text>
         <Text style={styles.text}>
           O foco inicial e autenticar, navegar e preparar a base para gerenciar times e Pokemon.
