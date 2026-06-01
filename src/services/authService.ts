@@ -8,6 +8,10 @@ function normalizeEmail(value: string) {
   return value.trim().toLowerCase();
 }
 
+function normalizeDisplayName(value?: string) {
+  return value?.trim() ?? '';
+}
+
 function mapAuthErrorMessage(error: unknown, fallback = 'Nao foi possivel autenticar. Tente novamente.') {
   const message = error instanceof Error ? error.message.toLowerCase() : '';
 
@@ -37,7 +41,7 @@ export const authService = {
     assertApiConfig();
 
     const normalizedEmail = normalizeEmail(email);
-    const normalizedDisplayName = displayName?.trim();
+    const normalizedDisplayName = normalizeDisplayName(displayName);
 
     if (!normalizedEmail) throw new Error('Email invalido.');
 
@@ -61,7 +65,14 @@ export const authService = {
       return data;
     }
 
-    return signInWithPassword(normalizedEmail, password);
+    const signInData = await signInWithPassword(normalizedEmail, password);
+    const signedUser = signInData.session?.user ?? signInData.user;
+
+    if (!signedUser) {
+      throw new Error('Usuario criado, mas nao foi possivel iniciar sessao automaticamente.');
+    }
+
+    return signInData;
   },
 
   async signIn(email: string, password: string) {
