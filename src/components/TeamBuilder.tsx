@@ -15,7 +15,7 @@ import {
 } from 'react-native';
 
 import { AppButton } from '@/components/AppButton';
-import { fetchPokemon, fetchPokemonList, type PokeApiPokemon, type PokemonListItem } from '@/services/pokeApi';
+import { fetchBattleItemList, fetchPokemon, fetchPokemonList, type PokeApiPokemon, type PokemonListItem } from '@/services/pokeApi';
 import { teamService } from '@/services/teamService';
 import { colors, radii, spacing } from '@/styles/theme';
 import type { StatSpread, Team, TeamPokemon, TeamPokemonInput } from '@/types/team';
@@ -146,6 +146,28 @@ function parseLimitedNumber(value: string, fallback: number, min: number, max: n
   return Math.min(max, Math.max(min, parsed));
 }
 
+function getStatValue(spread: StatSpread, stat: keyof StatSpread, fallback = 0) {
+  return spread[stat] ?? fallback;
+}
+
+function calculateEffectiveStats(pokemon: BuilderPokemon) {
+  const baseStats = pokemon.base_stats ?? {};
+
+  return STAT_KEYS.reduce<Record<keyof StatSpread, number>>((effective, stat) => {
+    const base = getStatValue(baseStats, stat);
+    const iv = getStatValue(pokemon.ivs, stat, 31);
+    const ev = getStatValue(pokemon.evs, stat);
+
+    if (stat === 'hp') {
+      effective[stat] = Math.floor((((base + iv + Math.floor(ev / 4)) * 2 + 100) * pokemon.level) / 100) + pokemon.level + 10;
+      return effective;
+    }
+
+    effective[stat] = Math.floor((((base + iv + Math.floor(ev / 4)) * 2) * pokemon.level) / 100) + 5;
+    return effective;
+  }, {} as Record<keyof StatSpread, number>);
+}
+
 export function TeamBuilder({ mode, initialTeam }: TeamBuilderProps) {
   const [teamName, setTeamName] = useState(initialTeam?.name ?? 'Meu Time');
   const [slots, setSlots] = useState<(BuilderPokemon | null)[]>(() => toSlots(initialTeam));
@@ -157,6 +179,8 @@ export function TeamBuilder({ mode, initialTeam }: TeamBuilderProps) {
   const [loadingSlot, setLoadingSlot] = useState(false);
   const [saving, setSaving] = useState(false);
   const [loadingTeams, setLoadingTeams] = useState(true);
+  const [itemList, setItemList] = useState<string[]>([]);
+  const [loadingItems, setLoadingItems] = useState(true);
 
   const selectedPokemon = slots[selectedSlot];
   const pokemonCount = slots.filter(Boolean).length;
@@ -198,6 +222,21 @@ export function TeamBuilder({ mode, initialTeam }: TeamBuilderProps) {
     void loadPokemon();
     void loadSavedTeams();
   }, [loadSavedTeams]);
+
+  useEffect(() => {
+    const loadItems = async () => {
+      try {
+        setLoadingItems(true);
+        setItemList(await fetchBattleItemList());
+      } catch {
+        setItemList([]);
+      } finally {
+        setLoadingItems(false);
+      }
+    };
+
+    void loadItems();
+  }, []);
 
   useEffect(() => {
     const hydrateSelectedPokemon = async () => {
@@ -379,6 +418,8 @@ export function TeamBuilder({ mode, initialTeam }: TeamBuilderProps) {
               onChange={patchSelectedPokemon}
               onMoveChange={updateMove}
               onStatChange={updateSelectedStat}
+              itemList={itemList}
+              loadingItems={loadingItems}
               onRemove={() => updateSlot(selectedSlot, null)}
             />
           ) : (
@@ -476,10 +517,39 @@ type PokemonEditorProps = {
   onChange: (patch: Partial<BuilderPokemon>) => void;
   onMoveChange: (moveIndex: number, value: string) => void;
   onStatChange: (group: 'ivs' | 'evs', stat: keyof StatSpread, value: string) => void;
+  itemList: string[];
+  loadingItems: boolean;
   onRemove: () => void;
 };
 
-function PokemonEditor({ pokemon, onChange, onMoveChange, onStatChange, onRemove }: PokemonEditorProps) {
+function PokemonEditor({ pokemon, onChange, onMoveChange, onStatChange, itemList, loadingItems, onRemove }: PokemonEditorProps) {
+  const [selectedMoveIndex, setSelectedMoveIndex] = useState(0);
+  const [moveSearch, setMoveSearch] = useState('');
+  const [abilitySearch, setAbilitySearch] = useState('');
+
+  const filteredMoves = useMemo(() => {
+    const normalized = moveSearch.trim().toLowerCase();
+    if (!normalized) return pokemon.availableMoves;
+    return pokemon.availableMoves.filter((move) => move.includes(normalized));
+  }, [moveSearch, pokemon.availableMoves]);
+
+  const filteredAbilities = useMemo(() => {
+    const normalized = abilitySearch.trim().toLowerCase();
+    if (!normalized) return pokemon.availableAbilities;
+    return pokemon.availableAbilities.filter((ability) => ability.includes(normalized));
+  }, [abilitySearch, pokemon.availableAbilities]);
+
+  const handleMoveSelect = (move: string) => {
+    const duplicateIndex = pokemon.moves.findIndex((currentMove, index) => index !== selectedMoveIndex && currentMove === move);
+
+    if (duplicateIndex >= 0) {
+      Alert.alert('Golpe repetido', `Este Pokemon ja usa ${formatPokemonName(move)} no golpe ${duplicateIndex + 1}.`);
+      return;
+    }
+
+    onMoveChange(selectedMoveIndex, move);
+  };
+
   return (
     <View style={styles.section}>
       <View style={styles.editorHeader}>
@@ -514,42 +584,57 @@ function PokemonEditor({ pokemon, onChange, onMoveChange, onStatChange, onRemove
       <View style={styles.fieldGroup}>
         <Text style={styles.label}>Golpes</Text>
         {pokemon.moves.map((move, index) => (
-          <TextInput
+          <Pressable
             key={`move-${index}`}
-            value={move}
-            onChangeText={(value) => onMoveChange(index, value)}
-            placeholder="Selecione um golpe"
-            placeholderTextColor={colors.muted}
-            style={styles.input}
-            autoCapitalize="none"
-          />
+            onPress={() => setSelectedMoveIndex(index)}
+            style={({ pressed }) => [
+              styles.readonlyChoice,
+              selectedMoveIndex === index && styles.readonlyChoiceSelected,
+              pressed && styles.pressed,
+            ]}
+          >
+            <Text style={styles.readonlyChoiceLabel}>Golpe {index + 1}</Text>
+            <Text style={styles.readonlyChoiceValue}>{move ? formatPokemonName(move) : 'Selecione pela lista'}</Text>
+          </Pressable>
         ))}
-        <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.chipRow}>
-          {pokemon.availableMoves.slice(0, 18).map((move) => (
-            <Pressable key={move} onPress={() => onMoveChange(firstEmptyMoveIndex(pokemon.moves), move)} style={styles.chip}>
-              <Text style={styles.chipText}>{formatPokemonName(move)}</Text>
-            </Pressable>
-          ))}
-        </ScrollView>
+        <TextInput
+          value={moveSearch}
+          onChangeText={setMoveSearch}
+          placeholder={`Filtrar golpes para trocar o golpe ${selectedMoveIndex + 1}`}
+          placeholderTextColor={colors.muted}
+          style={styles.filterInput}
+          autoCapitalize="none"
+        />
+        <OptionPicker
+          title={`Lista completa de golpes - substitui o golpe ${selectedMoveIndex + 1}`}
+          options={filteredMoves}
+          selectedValue={pokemon.moves[selectedMoveIndex]}
+          onSelect={handleMoveSelect}
+        />
       </View>
 
       <View style={styles.fieldGroup}>
         <Text style={styles.label}>Habilidade</Text>
+        <View style={styles.readonlyField}>
+          <Text style={styles.readonlyChoiceLabel}>Habilidade atual</Text>
+          <Text style={styles.readonlyChoiceValue}>
+            {pokemon.ability ? formatPokemonName(pokemon.ability) : 'Selecione pela lista'}
+          </Text>
+        </View>
         <TextInput
-          value={pokemon.ability ?? ''}
-          onChangeText={(ability) => onChange({ ability })}
-          placeholder="Selecione uma habilidade"
+          value={abilitySearch}
+          onChangeText={setAbilitySearch}
+          placeholder="Filtrar habilidades disponiveis"
           placeholderTextColor={colors.muted}
-          style={styles.input}
+          style={styles.filterInput}
           autoCapitalize="none"
         />
-        <View style={styles.chipWrap}>
-          {pokemon.availableAbilities.map((ability) => (
-            <Pressable key={ability} onPress={() => onChange({ ability })} style={styles.chip}>
-              <Text style={styles.chipText}>{formatPokemonName(ability)}</Text>
-            </Pressable>
-          ))}
-        </View>
+        <OptionPicker
+          title="Habilidades disponiveis"
+          options={filteredAbilities}
+          selectedValue={pokemon.ability ?? ''}
+          onSelect={(ability) => onChange({ ability })}
+        />
       </View>
 
       <View style={styles.fieldGroup}>
@@ -562,7 +647,22 @@ function PokemonEditor({ pokemon, onChange, onMoveChange, onStatChange, onRemove
           style={styles.input}
           autoCapitalize="none"
         />
+        {loadingItems ? (
+          <View style={styles.inlineLoading}>
+            <ActivityIndicator color={colors.primary} />
+            <Text style={styles.text}>Carregando items...</Text>
+          </View>
+        ) : (
+          <OptionPicker
+            title="Items da PokeAPI"
+            options={itemList}
+            selectedValue={pokemon.item ?? ''}
+            onSelect={(item) => onChange({ item })}
+          />
+        )}
       </View>
+
+      <EffectiveStats pokemon={pokemon} />
 
       <StatEditor title="IVs" values={pokemon.ivs} group="ivs" onChange={onStatChange} />
       <StatEditor title="EVs" values={pokemon.evs} group="evs" onChange={onStatChange} />
@@ -574,9 +674,65 @@ function PokemonEditor({ pokemon, onChange, onMoveChange, onStatChange, onRemove
   );
 }
 
-function firstEmptyMoveIndex(moves: string[]) {
-  const index = moves.findIndex((move) => !move.trim());
-  return index >= 0 ? index : 0;
+type OptionPickerProps = {
+  title: string;
+  options: string[];
+  selectedValue?: string;
+  onSelect: (value: string) => void;
+};
+
+function OptionPicker({ title, options, selectedValue, onSelect }: OptionPickerProps) {
+  if (options.length === 0) {
+    return <Text style={styles.text}>Nenhuma opcao disponivel.</Text>;
+  }
+
+  return (
+    <View style={styles.optionPicker}>
+      <Text style={styles.optionPickerTitle}>{title}</Text>
+      <ScrollView nestedScrollEnabled style={styles.optionList} contentContainerStyle={styles.optionListContent}>
+        {options.map((option) => {
+          const selected = selectedValue === option;
+          return (
+            <Pressable
+              key={option}
+              onPress={() => onSelect(option)}
+              style={({ pressed }) => [
+                styles.optionRow,
+                selected && styles.optionRowSelected,
+                pressed && styles.pressed,
+              ]}
+            >
+              <Text style={[styles.optionRowText, selected && styles.optionRowTextSelected]}>{formatPokemonName(option)}</Text>
+            </Pressable>
+          );
+        })}
+      </ScrollView>
+    </View>
+  );
+}
+
+function EffectiveStats({ pokemon }: { pokemon: BuilderPokemon }) {
+  const effectiveStats = calculateEffectiveStats(pokemon);
+
+  return (
+    <View style={styles.effectiveBox}>
+      <Text style={styles.label}>Stats Efetivos</Text>
+      {STAT_KEYS.map((stat) => {
+        const value = effectiveStats[stat];
+        const width = `${Math.min(100, Math.round((value / 300) * 100))}%` as const;
+
+        return (
+          <View key={`effective-${stat}`} style={styles.effectiveRow}>
+            <Text style={styles.effectiveLabel}>{STAT_LABELS[stat]}</Text>
+            <View style={styles.effectiveTrack}>
+              <View style={[styles.effectiveFill, { width }]} />
+            </View>
+            <Text style={styles.effectiveValue}>{value}</Text>
+          </View>
+        );
+      })}
+    </View>
+  );
 }
 
 type StatEditorProps = {
@@ -656,6 +812,17 @@ const styles = StyleSheet.create({
     color: colors.text,
     backgroundColor: colors.input,
     fontSize: 16,
+  },
+  filterInput: {
+    minHeight: 48,
+    borderWidth: 1,
+    borderColor: colors.info,
+    borderRadius: radii.md,
+    paddingHorizontal: spacing.md,
+    color: colors.text,
+    backgroundColor: '#0b2338',
+    fontSize: 16,
+    fontWeight: '700',
   },
   actionRow: {
     flexDirection: 'row',
@@ -779,6 +946,118 @@ const styles = StyleSheet.create({
   chipText: {
     color: colors.text,
     fontWeight: '700',
+  },
+  readonlyChoice: {
+    gap: spacing.xs,
+    minHeight: 58,
+    justifyContent: 'center',
+    paddingHorizontal: spacing.md,
+    borderWidth: 1,
+    borderColor: colors.border,
+    borderRadius: radii.md,
+    backgroundColor: colors.input,
+  },
+  readonlyChoiceSelected: {
+    borderColor: colors.primary,
+    backgroundColor: '#12365f',
+  },
+  readonlyField: {
+    gap: spacing.xs,
+    minHeight: 58,
+    justifyContent: 'center',
+    paddingHorizontal: spacing.md,
+    borderWidth: 1,
+    borderColor: colors.border,
+    borderRadius: radii.md,
+    backgroundColor: colors.input,
+  },
+  readonlyChoiceLabel: {
+    color: colors.textSoft,
+    fontSize: 12,
+    fontWeight: '800',
+    textTransform: 'uppercase',
+  },
+  readonlyChoiceValue: {
+    color: colors.text,
+    fontSize: 16,
+    fontWeight: '800',
+  },
+  inlineLoading: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.sm,
+    paddingVertical: spacing.sm,
+  },
+  optionPicker: {
+    gap: spacing.xs,
+    padding: spacing.sm,
+    borderWidth: 1,
+    borderColor: colors.border,
+    borderRadius: radii.md,
+    backgroundColor: colors.input,
+  },
+  optionPickerTitle: {
+    color: colors.textSoft,
+    fontWeight: '800',
+  },
+  optionList: {
+    maxHeight: 190,
+  },
+  optionListContent: {
+    gap: spacing.xs,
+  },
+  optionRow: {
+    minHeight: 42,
+    justifyContent: 'center',
+    paddingHorizontal: spacing.md,
+    borderRadius: radii.sm,
+    backgroundColor: '#24364f',
+  },
+  optionRowSelected: {
+    backgroundColor: colors.primary,
+  },
+  optionRowText: {
+    color: colors.text,
+    fontWeight: '700',
+  },
+  optionRowTextSelected: {
+    color: '#fff',
+  },
+  effectiveBox: {
+    gap: spacing.sm,
+    padding: spacing.md,
+    borderWidth: 1,
+    borderColor: colors.border,
+    borderRadius: radii.md,
+    backgroundColor: colors.input,
+  },
+  effectiveRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.sm,
+  },
+  effectiveLabel: {
+    width: 82,
+    color: colors.textSoft,
+    fontWeight: '800',
+  },
+  effectiveTrack: {
+    flex: 1,
+    height: 10,
+    overflow: 'hidden',
+    borderRadius: 999,
+    backgroundColor: '#1f2937',
+  },
+  effectiveFill: {
+    height: '100%',
+    borderRadius: 999,
+    backgroundColor: colors.primary,
+  },
+  effectiveValue: {
+    width: 38,
+    color: colors.text,
+    textAlign: 'right',
+    fontWeight: '900',
   },
   statBox: {
     gap: spacing.sm,
