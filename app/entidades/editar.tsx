@@ -1,69 +1,55 @@
 import { router, useLocalSearchParams } from 'expo-router';
 import { useEffect, useState } from 'react';
-import { Alert, ScrollView, StyleSheet, Text, TextInput } from 'react-native';
+import { ActivityIndicator, Alert, StyleSheet, Text, View } from 'react-native';
 
-import { AppButton } from '@/components/AppButton';
+import { TeamBuilder } from '@/components/TeamBuilder';
 import { teamService } from '@/services/teamService';
-import { colors, radii, spacing } from '@/styles/theme';
+import { colors, spacing } from '@/styles/theme';
+import type { Team } from '@/types/team';
 
 export default function EditTeamScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
-  const [name, setName] = useState('');
-  const [saving, setSaving] = useState(false);
+  const [team, setTeam] = useState<Team | null>(null);
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     const load = async () => {
       if (!id) return;
-      const team = await teamService.getTeamById(id);
-      setName(team.name);
+      try {
+        setLoading(true);
+        setTeam(await teamService.getTeamById(id));
+      } catch (error) {
+        Alert.alert('Erro', error instanceof Error ? error.message : 'Time nao encontrado.');
+        router.replace('/entidades');
+      } finally {
+        setLoading(false);
+      }
     };
 
     void load();
   }, [id]);
 
-  const handleSave = async () => {
-    if (!id || !name.trim()) return;
+  if (loading) {
+    return (
+      <View style={styles.center}>
+        <ActivityIndicator color={colors.primary} />
+        <Text style={styles.text}>Carregando time...</Text>
+      </View>
+    );
+  }
 
-    try {
-      setSaving(true);
-      const existingTeam = await teamService.getTeamById(id);
-      await teamService.updateTeam(id, name.trim(), existingTeam.team_pokemon);
-      router.replace(`/entidades/${id}`);
-    } catch (error) {
-      Alert.alert('Erro ao atualizar', error instanceof Error ? error.message : 'Tente novamente.');
-    } finally {
-      setSaving(false);
-    }
-  };
-
-  return (
-    <ScrollView contentContainerStyle={styles.container}>
-      <Text style={styles.title}>Editar time</Text>
-      <TextInput value={name} onChangeText={setName} style={styles.input} placeholder="Nome do time" placeholderTextColor={colors.muted} />
-      <AppButton label={saving ? 'Salvando...' : 'Salvar alteracoes'} onPress={handleSave} disabled={saving} />
-    </ScrollView>
-  );
+  return <TeamBuilder mode="edit" initialTeam={team} />;
 }
 
 const styles = StyleSheet.create({
-  container: {
-    flexGrow: 1,
+  center: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
     gap: spacing.md,
-    padding: spacing.lg,
     backgroundColor: colors.background,
   },
-  title: {
-    color: colors.text,
-    fontSize: 28,
-    fontWeight: '900',
-  },
-  input: {
-    minHeight: 50,
-    borderWidth: 1,
-    borderColor: colors.border,
-    borderRadius: radii.md,
-    paddingHorizontal: spacing.md,
-    color: colors.text,
-    backgroundColor: colors.input,
+  text: {
+    color: colors.textSoft,
   },
 });

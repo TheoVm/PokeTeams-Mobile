@@ -17,9 +17,21 @@ export type PokeApiPokemon = {
   moves: string[];
 };
 
-const POKE_API_BASE_URL = 'https://pokeapi.co/api/v2';
+export type PokemonListItem = {
+  id: number;
+  name: string;
+  imageUrl: string;
+};
 
-function mapStats(stats: Array<{ base_stat: number; stat: { name: string } }>) {
+const POKE_API_BASE_URL = 'https://pokeapi.co/api/v2';
+const POKE_SPRITE_BASE_URL = 'https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon';
+
+function getPokemonIdFromUrl(url: string) {
+  const match = url.match(/\/pokemon\/(\d+)\/?$/);
+  return match ? Number(match[1]) : 0;
+}
+
+function mapStats(stats: { base_stat: number; stat: { name: string } }[]) {
   return stats.reduce<Record<string, number>>((acc, item) => {
     const name = item.stat.name;
     if (name === 'hp') acc.hp = item.base_stat;
@@ -54,6 +66,27 @@ export async function fetchPokemon(idOrName: number | string): Promise<PokeApiPo
     stats: mapStats(data.stats ?? []),
     height: data.height ?? 0,
     weight: data.weight ?? 0,
-    moves: (data.moves ?? []).slice(0, 4).map((item: any) => item.move?.name).filter(Boolean),
+    moves: (data.moves ?? []).slice(0, 60).map((item: any) => item.move?.name).filter(Boolean),
   };
+}
+
+export async function fetchPokemonList(limit = 151, offset = 0): Promise<PokemonListItem[]> {
+  const response = await fetch(`${POKE_API_BASE_URL}/pokemon?limit=${limit}&offset=${offset}`);
+
+  if (!response.ok) {
+    throw new Error('Nao foi possivel carregar a lista de Pokemon.');
+  }
+
+  const data = await response.json();
+
+  return (data.results ?? [])
+    .map((item: { name: string; url: string }) => {
+      const id = getPokemonIdFromUrl(item.url);
+      return {
+        id,
+        name: item.name,
+        imageUrl: `${POKE_SPRITE_BASE_URL}/${id}.png`,
+      };
+    })
+    .filter((item: PokemonListItem) => item.id > 0);
 }
