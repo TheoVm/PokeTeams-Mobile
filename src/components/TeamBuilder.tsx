@@ -272,17 +272,39 @@ export function TeamBuilder({ mode, initialTeam }: TeamBuilderProps) {
     updateSlot(selectedSlot, { ...selectedPokemon, ...patch });
   };
 
-  const updateSelectedStat = (group: 'ivs' | 'evs', stat: keyof StatSpread, value: string) => {
-    if (!selectedPokemon) return;
-    const max = group === 'ivs' ? 31 : 252;
-    const fallback = selectedPokemon[group]?.[stat] ?? 0;
-    patchSelectedPokemon({
-      [group]: {
-        ...selectedPokemon[group],
-        [stat]: parseLimitedNumber(value, fallback, 0, max),
-      },
-    });
-  };
+const updateSelectedStat = (group: 'ivs' | 'evs', stat: keyof StatSpread, value: string) => {
+  if (!selectedPokemon) return;
+
+  const max = group === 'ivs' ? 31 : 252;
+  const fallback = selectedPokemon[group]?.[stat] ?? 0;
+
+  const newValue = parseLimitedNumber(value, fallback, 0, max);
+
+  if (group === 'evs') {
+    const currentTotal = Object.values(selectedPokemon.evs).reduce(
+      (sum, ev) => sum + (ev ?? 0),
+      0
+    );
+
+    const currentStatValue = selectedPokemon.evs[stat] ?? 0;
+    const newTotal = currentTotal - currentStatValue + newValue;
+
+    if (newTotal > 510) {
+      Alert.alert(
+        'Limite de EVs',
+        'A soma total dos EVs não pode ultrapassar 510.'
+      );
+      return;
+    }
+  }
+
+  patchSelectedPokemon({
+    [group]: {
+      ...selectedPokemon[group],
+      [stat]: newValue,
+    },
+  });
+};  
 
   const updateMove = (moveIndex: number, value: string) => {
     if (!selectedPokemon) return;
